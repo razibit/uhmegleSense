@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Uhmegle Bot</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Uhmegle Bot</h1>
+    <div class="status-container">
+      <span>Status: </span>
+      <span id="bot-status">Stopped</span>
+    </div>
+    
+    <div class="country-container">
+      <h3>Target Countries</h3>
+      <div class="country-selection">
+        <select id="country-select">
+          <option value="">Select a country</option>
+          <option value="bangladesh">Bangladesh</option>
+          <option value="india">India</option>
+          <option value="pakistan">Pakistan</option>
+          <option value="usa">USA</option>
+          <option value="uk">UK</option>
+          <option value="australia">Australia</option>
+          <option value="canada">Canada</option>
+          <option value="germany">Germany</option>
+          <option value="france">France</option>
+          <option value="japan">Japan</option>
+        </select>
+        <button id="add-country">Add</button>
+      </div>
+      <div id="selected-countries" class="selected-countries"></div>
+    </div>
+    
+    <div class="button-container">
+      <button id="start-bot">Start Bot</button>
+      <button id="stop-bot">Stop Bot</button>
+    </div>
+    <div class="log-container">
+      <h3>Activity Log</h3>
+      <div id="log"></div>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

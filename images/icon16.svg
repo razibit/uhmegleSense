@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+    <rect width="16" height="16" fill="#4285f4" />
+    <text x="8" y="8.8" 
+      font-family="Arial" font-weight="bold" font-size="11.2" 
+      fill="white" text-anchor="middle" dominant-baseline="middle">U</text>
+    <rect x="1.6" y="1.6" width="12.8" height="12.8" 
+      fill="none" stroke="white" stroke-width="1" />
+  </svg>

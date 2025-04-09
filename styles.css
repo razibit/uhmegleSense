@@ -1,0 +1,157 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  width: 300px;
+}
+
+.container {
+  padding: 15px;
+}
+
+h1 {
+  font-size: 20px;
+  color: #4285f4;
+  margin-top: 0;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.status-container {
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+#bot-status {
+  font-weight: bold;
+}
+
+.country-container {
+  margin-bottom: 15px;
+  border: 1px solid #ddd;
+  padding: 10px;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+}
+
+.country-container h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #666;
+}
+
+.country-selection {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+#country-select {
+  flex-grow: 1;
+  padding: 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-right: 5px;
+}
+
+#add-country {
+  padding: 6px 10px;
+  background-color: #2196f3;
+  color: white;
+  width: auto;
+}
+
+.selected-countries {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.country-tag {
+  background-color: #4285f4;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.remove-country {
+  color: white;
+  background: none;
+  border: none;
+  margin-left: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  width: auto;
+  padding: 0 4px;
+}
+
+.button-container {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+}
+
+button {
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  width: 48%;
+}
+
+#start-bot {
+  background-color: #4caf50;
+  color: white;
+}
+
+#stop-bot {
+  background-color: #f44336;
+  color: white;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+.log-container {
+  margin-top: 15px;
+  border-top: 1px solid #ddd;
+  padding-top: 10px;
+}
+
+.log-container h3 {
+  margin-top: 0;
+  font-size: 14px;
+  color: #666;
+}
+
+#log {
+  max-height: 150px;
+  overflow-y: auto;
+  background-color: #f9f9f9;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.log-entry {
+  margin-bottom: 5px;
+  line-height: 1.4;
+}
+
+.success {
+  color: #4caf50;
+}
+
+.skip {
+  color: #f44336;
+}
+
+.info {
+  color: #2196f3;
+}
