@@ -1,48 +1,103 @@
-# Uhmegle Bot Chrome Extension
+# Uhmegle Bot
 
-A Chrome extension that automatically filters and interacts with users on uhmegle.com based on their location.
+A smart Chrome extension that filters and connects you with users from your preferred countries on uhmegle.com chat platform.
 
-## Features
+![Uhmegle Bot Logo](images/icon128.svg)
 
-- Monitors users on uhmegle.com
-- Automatically skips non-Bangladesh users
-- Sends a greeting message to users from Bangladesh
-- Shows browser notifications when a Bangladeshi user is found
-- Easy-to-use popup interface with Start/Stop buttons
-- Activity logging
+## 🌟 Features
 
-## Installation
+- **Country-Based Filtering**: Automatically finds users from your selected target countries
+- **Multi-Country Support**: Choose from a comprehensive list of 100+ countries 
+- **Smart Detection**: Recognizes country mentions in chat, flags, and location indicators
+- **Instant Notifications**: Visual and audio alerts when a matching user is found
+- **Intuitive UI**: Clean, user-friendly popup interface with live status updates
+- **Detailed Logging**: Tracks all actions for better monitoring
+- **Customizable Settings**: Enable/disable sound notifications
 
-1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable "Developer mode" by toggling the switch in the top right
-3. Click "Load unpacked" and select the extension directory
-4. The extension should now appear in your Chrome toolbar
+## 📋 Requirements
 
-## Usage
+- Google Chrome or Chromium-based browser (Edge, Brave, etc.)
+- Chrome extensions enabled
 
-1. Navigate to https://uhmegle.com/
-2. Click on the Uhmegle Bot extension icon in your toolbar
-3. Click "Start Bot" to begin monitoring
-4. The bot will automatically:
-   - Skip users not from Bangladesh
-   - Send "Hi" to users from Bangladesh
-   - Stop the bot and notify you when a Bangladeshi user is found
-5. Click "Stop Bot" at any time to stop the monitoring process
+## 🔧 Installation
 
-## Customization
+### From Source (Developer Mode)
 
-The extension includes placeholder selectors that need to be updated with the actual selectors from uhmegle.com:
+1. Download or clone this repository to your computer
+2. Open Chrome and navigate to `chrome://extensions/`
+3. Enable "Developer mode" by toggling the switch in the top right
+4. Click "Load unpacked" and select the Uhmegle-Bot directory
+5. The extension icon will appear in your browser toolbar
+
+## 🚀 How to Use
+
+1. Visit [https://uhmegle.com/](https://uhmegle.com/)
+2. Click the Uhmegle Bot icon in your browser toolbar
+3. Select your target countries from the dropdown menu
+4. Click "Start Bot" to begin monitoring
+5. The bot will:
+   - Skip users not from your selected countries
+   - Send a greeting message to matching users
+   - Alert you with sound and visual notifications when a match is found
+   - Show detailed status in the logs panel
+6. Click "Stop Bot" any time to pause the bot
+
+## 📱 User Interface
+
+The extension popup provides several sections:
+- **Controls**: Start and stop buttons with current status indicator
+- **Country Selection**: Add multiple target countries from a dropdown list
+- **Selected Countries**: View and remove your currently selected target countries
+- **Logs Panel**: Real-time activity and event tracking
+
+## ⚙️ Advanced Configuration
+
+The extension is designed to work out-of-the-box with uhmegle.com, but you can customize the behavior:
+
+### Custom Greetings
+
+By default, the bot sends "Hi" as a greeting message. To modify:
 
 1. Open `content.js`
-2. Update the following functions with the correct selectors:
-   - `checkIfConnected()` - to detect when connected to a stranger
-   - `getStrangerLocation()` - to get the stranger's location
-   - `sendMessage()` - to find the chat input and send button
-   - `skipUser()` - to find the skip button
+2. Find the `checkStranger()` function
+3. Modify the `sendMessage('Hi')` line with your preferred greeting
 
-## Note About Icons
+### Country Detection
 
-Before using the extension, add icon files to the `images` directory:
-- icon16.png (16x16 pixels)
-- icon48.png (48x48 pixels)
-- icon128.png (128x128 pixels)
+The bot uses multiple strategies to detect country information:
+- Flag indicators
+- Status messages
+- Chat messages
+- User's shared interests
+
+## 🔔 Notifications
+
+When a user from your target country is found:
+- A sound notification plays (can be enabled/disabled)
+- Browser tab title flashes
+- Red visual overlay appears
+- Browser notification is displayed (requires permission)
+
+## 🛠️ Troubleshooting
+
+### Sound Not Working
+- Make sure notifications are enabled in the settings
+- Check that your browser allows audio playback
+- Try clicking on the page first to enable audio (browser autoplay policies)
+
+### Country Not Detected
+- The bot uses various methods to detect countries, but some users may not display location info
+- Try adding variations of the country name or major cities to improve detection
+
+### Extension Not Starting
+- Ensure you're on the uhmegle.com website
+- Check browser console for any errors
+- Try reloading the extension from the chrome://extensions page
+
+## 📝 License
+
+This project is provided for educational purposes. Use responsibly and in accordance with uhmegle.com's terms of service.
+
+## 🤝 Contributing
+
+Contributions, bug reports, and feature requests are welcome! Feel free to submit a pull request or open an issue.
