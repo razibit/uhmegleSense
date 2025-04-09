@@ -6,9 +6,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const countrySelect = document.getElementById('country-select');
   const addCountryButton = document.getElementById('add-country');
   const selectedCountriesContainer = document.getElementById('selected-countries');
+  const greetingInput = document.getElementById('greeting-text');
+  const saveGreetingButton = document.getElementById('save-greeting');
+  const continuousModeCheckbox = document.getElementById('continuous-mode');
   
   // Selected countries array
   let selectedCountries = [];
+  // Default greeting message
+  let greetingMessage = 'Hi';
+  // Continuous mode setting
+  let continuousMode = false;
 
   // List of all countries
   const countries = [
@@ -68,6 +75,52 @@ document.addEventListener('DOMContentLoaded', () => {
     logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
     logContainer.appendChild(logEntry);
     logContainer.scrollTop = logContainer.scrollHeight;
+  }
+  
+  // Save greeting message to storage
+  function saveGreeting() {
+    const message = greetingInput.value.trim();
+    if (message) {
+      greetingMessage = message;
+      chrome.storage.local.set({ greetingMessage: message }, () => {
+        addLogEntry(`Greeting message saved: "${message}"`, 'success');
+        
+        // Update active bot if running
+        if (botStatus.textContent === 'Running') {
+          chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs[0] && tabs[0].url.includes('uhmegle.com')) {
+              chrome.tabs.sendMessage(tabs[0].id, { 
+                action: 'UPDATE_GREETING',
+                greetingMessage: message
+              });
+            }
+          });
+        }
+      });
+    } else {
+      greetingInput.value = greetingMessage; // Reset to previous value
+      addLogEntry('Greeting message cannot be empty', 'skip');
+    }
+  }
+  
+  // Toggle continuous mode
+  function toggleContinuousMode() {
+    continuousMode = continuousModeCheckbox.checked;
+    chrome.storage.local.set({ continuousMode }, () => {
+      addLogEntry(`Continuous mode ${continuousMode ? 'enabled' : 'disabled'}`, 'info');
+      
+      // Update active bot if running
+      if (botStatus.textContent === 'Running') {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs[0] && tabs[0].url.includes('uhmegle.com')) {
+            chrome.tabs.sendMessage(tabs[0].id, {
+              action: 'UPDATE_CONTINUOUS_MODE',
+              continuousMode: continuousMode
+            });
+          }
+        });
+      }
+    });
   }
   
   // Render selected countries as tags
@@ -130,8 +183,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize the country dropdown
   populateCountryDropdown();
 
-  // Check current bot status
-  chrome.storage.local.get(['botRunning', 'targetCountries'], (result) => {
+  // Check current bot status and load saved settings
+  chrome.storage.local.get(['botRunning', 'targetCountries', 'greetingMessage', 'continuousMode'], (result) => {
     updateBotStatus(result.botRunning === true);
     
     // Load saved countries
@@ -142,6 +195,18 @@ document.addEventListener('DOMContentLoaded', () => {
       // Default to Bangladesh if no countries are set
       selectedCountries = ['bangladesh'];
       renderSelectedCountries();
+    }
+    
+    // Load saved greeting message
+    if (result.greetingMessage) {
+      greetingMessage = result.greetingMessage;
+      greetingInput.value = greetingMessage;
+    }
+    
+    // Load continuous mode setting
+    if (result.continuousMode !== undefined) {
+      continuousMode = result.continuousMode;
+      continuousModeCheckbox.checked = continuousMode;
     }
   });
 
@@ -164,6 +229,20 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
     }
   });
+  
+  // Save greeting button click handler
+  saveGreetingButton.addEventListener('click', saveGreeting);
+  
+  // Also save on Enter key in greeting input
+  greetingInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      saveGreeting();
+      e.preventDefault();
+    }
+  });
+  
+  // Continuous mode checkbox handler
+  continuousModeCheckbox.addEventListener('change', toggleContinuousMode);
 
   // Start bot button click handler
   startButton.addEventListener('click', () => {
@@ -182,7 +261,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tabs[0] && tabs[0].url.includes('uhmegle.com')) {
           chrome.tabs.sendMessage(tabs[0].id, { 
             action: 'START_BOT',
-            targetCountries: selectedCountries
+            targetCountries: selectedCountries,
+            greetingMessage: greetingMessage,
+            continuousMode: continuousMode
           });
         } else {
           addLogEntry('Please navigate to uhmegle.com first', 'skip');
@@ -227,6 +308,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         chrome.storage.local.set({ botLogs: logs });
       });
+    } else if (message.action === 'UPDATE_STATUS') {
+      updateBotStatus(message.isRunning);
     }
   });
 });

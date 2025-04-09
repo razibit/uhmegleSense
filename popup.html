@@ -33,6 +33,30 @@
       <div id="selected-countries" class="selected-countries"></div>
     </div>
     
+    <div class="greeting-container">
+      <h3>Greeting Message</h3>
+      <div class="greeting-input">
+        <input type="text" id="greeting-text" placeholder="Enter greeting message..." value="Hi">
+        <button id="save-greeting">Save</button>
+      </div>
+      <div class="greeting-help">
+        <small>This message will be sent when a matching user is found.</small>
+      </div>
+    </div>
+    
+    <div class="settings-container">
+      <h3>Settings</h3>
+      <div class="setting-item">
+        <label class="checkbox-container">
+          <input type="checkbox" id="continuous-mode"> 
+          <span class="checkbox-text">Continuous Mode</span>
+        </label>
+        <div class="setting-help">
+          <small>When enabled, the bot will automatically continue searching after a match disconnects</small>
+        </div>
+      </div>
+    </div>
+    
     <div class="button-container">
       <button id="start-bot">Start Bot</button>
       <button id="stop-bot">Stop Bot</button>

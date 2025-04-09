@@ -4,6 +4,10 @@ let botInterval = null;
 const CHECK_INTERVAL = 1000; // Check every second
 let targetCountries = ['bangladesh']; // Default target country
 let notificationSound = true; // Enable sound notifications by default
+let greetingMessage = 'Hi'; // Default greeting message
+let continuousMode = false; // Continuous mode (auto-restart when disconnected)
+let foundTargetUser = false; // Flag to track if we found a target user
+let lastConnectionStatus = false; // Track previous connection status
 
 // Country name variations for better matching
 const COUNTRY_VARIATIONS = {
@@ -119,13 +123,21 @@ const COUNTRY_VARIATIONS_FULL = {
 };
 
 // Initialize bot state from local storage
-chrome.storage.local.get(['botRunning', 'targetCountries', 'notificationSound'], (result) => {
+chrome.storage.local.get(['botRunning', 'targetCountries', 'notificationSound', 'greetingMessage', 'continuousMode'], (result) => {
   if (result.targetCountries && Array.isArray(result.targetCountries)) {
     targetCountries = result.targetCountries;
   }
   
   if (result.notificationSound !== undefined) {
     notificationSound = result.notificationSound;
+  }
+  
+  if (result.greetingMessage) {
+    greetingMessage = result.greetingMessage;
+  }
+  
+  if (result.continuousMode !== undefined) {
+    continuousMode = result.continuousMode;
   }
   
   if (result.botRunning === true) {
@@ -148,6 +160,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       chrome.storage.local.set({ notificationSound });
     }
     
+    // Update greeting message if provided
+    if (message.greetingMessage) {
+      greetingMessage = message.greetingMessage;
+      chrome.storage.local.set({ greetingMessage });
+    }
+    
+    // Update continuous mode setting if provided
+    if (message.continuousMode !== undefined) {
+      continuousMode = message.continuousMode;
+      chrome.storage.local.set({ continuousMode });
+    }
+    
     startBot();
   } else if (message.action === 'STOP_BOT') {
     stopBot();
@@ -155,6 +179,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     notificationSound = message.enabled;
     chrome.storage.local.set({ notificationSound });
     logMessage(`Sound notifications ${notificationSound ? 'enabled' : 'disabled'}`, 'info');
+  } else if (message.action === 'UPDATE_GREETING') {
+    greetingMessage = message.greetingMessage;
+    chrome.storage.local.set({ greetingMessage });
+    logMessage(`Greeting message updated to: "${greetingMessage}"`, 'info');
+  } else if (message.action === 'UPDATE_CONTINUOUS_MODE') {
+    continuousMode = message.continuousMode;
+    chrome.storage.local.set({ continuousMode });
+    logMessage(`Continuous mode ${continuousMode ? 'enabled' : 'disabled'}`, 'info');
   }
 });
 
@@ -173,8 +205,12 @@ function startBot() {
   if (botRunning) return;
   
   botRunning = true;
+  foundTargetUser = false;
+  lastConnectionStatus = false;
+  
   chrome.storage.local.set({ botRunning: true });
   logMessage(`Bot started monitoring for countries: ${targetCountries.join(', ')}`);
+  logMessage(`Continuous mode is ${continuousMode ? 'enabled' : 'disabled'}`);
   
   botInterval = setInterval(checkStranger, CHECK_INTERVAL);
 }
@@ -184,6 +220,8 @@ function stopBot() {
   if (!botRunning) return;
   
   botRunning = false;
+  foundTargetUser = false;
+  
   chrome.storage.local.set({ botRunning: false });
   logMessage('Bot stopped monitoring');
   
@@ -191,6 +229,12 @@ function stopBot() {
     clearInterval(botInterval);
     botInterval = null;
   }
+  
+  // Notify popup that bot status changed
+  chrome.runtime.sendMessage({
+    action: 'UPDATE_STATUS',
+    isRunning: false
+  });
 }
 
 // Check if we're connected to a stranger and process accordingly
@@ -199,13 +243,57 @@ function checkStranger() {
     // Check if we're connected to someone
     const isConnected = checkIfConnected();
     
+    // Detect disconnection from target user
+    if (foundTargetUser && lastConnectionStatus && !isConnected) {
+      logMessage('Disconnected from target country user', 'info');
+      
+      if (continuousMode) {
+        logMessage('Continuous mode active - resuming search for target countries', 'info');
+        foundTargetUser = false;
+        
+        // Add a small delay before continuing
+        setTimeout(() => {
+          // Check if there's a "New Chat" or similar button to click
+          const buttons = document.querySelectorAll('button');
+          let newChatButton = null;
+          
+          for (const btn of buttons) {
+            const btnText = btn.textContent.trim().toLowerCase();
+            if ((btn.offsetParent !== null) && 
+                (btnText.includes('new') || btnText.includes('start') || btnText.includes('chat'))) {
+              newChatButton = btn;
+              break;
+            }
+          }
+          
+          if (newChatButton) {
+            newChatButton.click();
+            logMessage('Clicked "New Chat" button to resume searching', 'info');
+          }
+        }, 1000);
+      } else {
+        logMessage('Bot stopped after disconnection (continuous mode disabled)', 'info');
+        stopBot();
+      }
+    }
+    
+    // Update last connection status
+    lastConnectionStatus = isConnected;
+    
     // Run page structure extraction occasionally for debugging
     if (Math.random() < 0.1) { // 10% chance to run extraction each check
       extractPageStructure();
     }
     
     if (!isConnected) {
-      logMessage('Waiting for connection...', 'info');
+      if (!foundTargetUser) {
+        logMessage('Waiting for connection...', 'info');
+      }
+      return;
+    }
+    
+    // Skip this check if we already found a target user
+    if (foundTargetUser) {
       return;
     }
     
@@ -224,6 +312,9 @@ function checkStranger() {
     
     // Check if location matches any target country
     if (isTargetCountry(country)) {
+      // Set flag that we found a target user immediately to prevent multiple matches
+      foundTargetUser = true;
+      
       // Add a small delay to ensure UI has stabilized
       setTimeout(() => {
         logMessage(`MATCH FOUND! User from ${country} (${source})`, 'success');
@@ -233,15 +324,26 @@ function checkStranger() {
           playNotificationSound();
         }
         
-        // Send a greeting message
-        sendMessage('Hi');
-        
         // Show browser notification
         showNotification('Target Country User Found!', `Location: ${country} (${source})`);
         
-        // Stop the bot - we found what we're looking for
-        stopBot();
-      }, 500); // Short delay of 500ms
+        // Send the configured greeting message with a small delay to ensure notifications are shown first
+        setTimeout(() => {
+          logMessage(`Sending greeting: "${greetingMessage}"`, 'info');
+          sendMessage(greetingMessage);
+          
+          // Give time for the message to be sent before potentially stopping the bot
+          if (!continuousMode) {
+            // If continuous mode is disabled, stop the bot after a delay to ensure message is sent
+            logMessage('Bot will stop in 5 seconds (continuous mode disabled)', 'info');
+            setTimeout(() => {
+              stopBot();
+            }, 5000);
+          } else {
+            logMessage('Continuous mode active - bot will continue after disconnection', 'info');
+          }
+        }, 1000);
+      }, 500); // Short delay of 500ms for UI stabilization
     } else {
       handleNonTargetUser(country);
     }
@@ -628,106 +730,180 @@ function checkIfConnected() {
 // Send a message in the chat
 function sendMessage(text) {
   try {
+    logMessage(`Attempting to send message: "${text}"`, 'info');
+    
     // Find the chat input field using multiple strategies
     let chatInput = null;
     
     // METHOD 1: Try common chat input selectors
-    chatInput = document.querySelector('textarea.chatmsg') ||
-               document.querySelector('#chatmsg') ||
-               document.querySelector('textarea[name="chatmsg"]') ||
-               document.querySelector('input[type="text"]') ||
-               document.querySelector('textarea');
+    const potentialInputs = [
+      'textarea.chatmsg',
+      '#chatmsg',
+      'textarea[name="chatmsg"]',
+      'input.chatmsg',
+      'input[type="text"]',
+      'textarea'
+    ];
+    
+    for (const selector of potentialInputs) {
+      const found = document.querySelector(selector);
+      if (found && found.offsetParent !== null) {
+        chatInput = found;
+        logMessage(`Found chat input using selector: ${selector}`, 'info');
+        break;
+      }
+    }
     
     if (!chatInput) {
       // METHOD 2: Find any enabled text input that looks like a chat box
       const allInputs = Array.from(document.querySelectorAll('textarea, input[type="text"]'));
-      chatInput = allInputs.find(input => !input.disabled);
+      const visibleInputs = allInputs.filter(input => !input.disabled && input.offsetParent !== null);
+      
+      if (visibleInputs.length > 0) {
+        // Prefer textareas over inputs as they're more commonly used for chat
+        const textareas = visibleInputs.filter(el => el.tagName.toLowerCase() === 'textarea');
+        if (textareas.length > 0) {
+          chatInput = textareas[0];
+          logMessage('Using first visible textarea as chat input', 'info');
+        } else {
+          chatInput = visibleInputs[0];
+          logMessage('Using first visible text input as chat input', 'info');
+        }
+      }
     }
     
     if (!chatInput) {
       throw new Error('Chat input not found');
     }
     
-    // Clear existing text first
+    // Make sure the input is focused and clear any existing text
+    chatInput.focus();
+    chatInput.click();
     chatInput.value = '';
     
-    // Set the value of the input
+    // Now set the new value
     chatInput.value = text;
     
-    // Dispatch events to simulate typing
-    chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-    chatInput.dispatchEvent(new Event('change', { bubbles: true }));
-    chatInput.focus();
+    // Dispatch events to simulate real typing
+    const events = ['input', 'change', 'keydown', 'keypress', 'keyup'];
+    events.forEach(eventType => {
+      const event = new Event(eventType, { bubbles: true });
+      chatInput.dispatchEvent(event);
+    });
     
     // Find and click the send button using multiple strategies
     let sendButton = null;
     
     // METHOD 1: Common send button selectors
-    sendButton = document.querySelector('button.sendbtn') ||
-                document.querySelector('button[data-key="enter"]') ||
-                document.querySelector('input[type="submit"]');
+    const potentialButtons = [
+      'button.sendbtn',
+      'button[data-key="enter"]',
+      'input[type="submit"]',
+      'button[type="submit"]',
+      'button#send',
+      'button.send',
+      'button.sendButton'
+    ];
     
-    // METHOD 2: Find by text
+    for (const selector of potentialButtons) {
+      const found = document.querySelector(selector);
+      if (found && found.offsetParent !== null) {
+        sendButton = found;
+        logMessage(`Found send button using selector: ${selector}`, 'info');
+        break;
+      }
+    }
+    
+    // METHOD 2: Find by text content
     if (!sendButton) {
       const buttons = Array.from(document.querySelectorAll('button'));
-      sendButton = buttons.find(btn => {
-        const text = btn.textContent.trim().toLowerCase();
-        return (text === 'send' || text === '>' || text.includes('send')) && btn.offsetParent !== null;
-      });
+      const visibleButtons = buttons.filter(btn => btn.offsetParent !== null);
+      
+      for (const btn of visibleButtons) {
+        const btnText = btn.textContent.trim().toLowerCase();
+        if (btnText === 'send' || btnText === '>' || btnText.includes('send')) {
+          sendButton = btn;
+          logMessage(`Found send button by text: ${btnText}`, 'info');
+          break;
+        }
+      }
     }
     
     // METHOD 3: Look for a button near the chat input
     if (!sendButton) {
       // Try to find a nearby button (often the send button is adjacent to the input)
-      const parent = chatInput.parentElement;
-      if (parent) {
-        const nearbyButtons = parent.querySelectorAll('button');
+      let currentNode = chatInput;
+      
+      // Look up through 3 parent levels to find nearby buttons
+      for (let i = 0; i < 3; i++) {
+        if (!currentNode.parentElement) break;
+        currentNode = currentNode.parentElement;
+        
+        const nearbyButtons = Array.from(currentNode.querySelectorAll('button'))
+                             .filter(btn => btn.offsetParent !== null);
+        
         if (nearbyButtons.length > 0) {
-          // Assume the last button in the container is the send button
-          sendButton = Array.from(nearbyButtons).find(btn => btn.offsetParent !== null);
+          // Prefer buttons positioned to the right of the input (common pattern)
+          sendButton = nearbyButtons[nearbyButtons.length - 1];
+          logMessage('Using button near chat input as send button', 'info');
+          break;
         }
       }
     }
     
+    // First try clicking the send button if found
     if (sendButton) {
-      // Click the send button
-      sendButton.click();
-      logMessage(`Message sent via button click: ${text}`, 'info');
+      // Create and dispatch proper mouse events for more reliable clicking
+      ['mousedown', 'mouseup', 'click'].forEach(eventType => {
+        const clickEvent = new MouseEvent(eventType, {
+          bubbles: true,
+          cancelable: true,
+          view: window
+        });
+        sendButton.dispatchEvent(clickEvent);
+      });
+      logMessage(`Message sent via button click: "${text}"`, 'info');
     } else {
-      // Fallback: Try to submit by pressing Enter
-      chatInput.dispatchEvent(new KeyboardEvent('keydown', {
-        key: 'Enter',
-        code: 'Enter',
-        which: 13,
-        keyCode: 13,
-        bubbles: true
-      }));
+      // Fallback: Try to submit by pressing Enter key
+      ['keydown', 'keypress', 'keyup'].forEach(eventType => {
+        const keyEvent = new KeyboardEvent(eventType, {
+          key: 'Enter',
+          code: 'Enter',
+          which: 13,
+          keyCode: 13,
+          bubbles: true,
+          cancelable: true
+        });
+        chatInput.dispatchEvent(keyEvent);
+      });
       
-      // Also try keyup and keypress
-      chatInput.dispatchEvent(new KeyboardEvent('keypress', {
-        key: 'Enter',
-        code: 'Enter',
-        which: 13,
-        keyCode: 13,
-        bubbles: true
-      }));
-      
-      chatInput.dispatchEvent(new KeyboardEvent('keyup', {
-        key: 'Enter',
-        code: 'Enter',
-        which: 13,
-        keyCode: 13,
-        bubbles: true
-      }));
-      
-      logMessage(`Message sent by pressing Enter: ${text}`, 'info');
+      logMessage(`Message sent by pressing Enter: "${text}"`, 'info');
     }
     
-    // Final trick: If there's a form, try to submit it
+    // Final fallback: If there's a form, try to submit it
     const form = chatInput.closest('form');
     if (form) {
-      form.dispatchEvent(new Event('submit', { bubbles: true }));
+      const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+      form.dispatchEvent(submitEvent);
+      logMessage('Attempted form submission as final fallback', 'info');
     }
+    
+    // Confirm message was sent by checking if input was cleared
+    setTimeout(() => {
+      if (chatInput.value === '') {
+        logMessage('Message successfully sent (input field cleared)', 'success');
+      } else if (chatInput.value === text) {
+        logMessage('Message may not have been sent (input field not cleared)', 'skip');
+        // Try one more time with Enter key
+        chatInput.dispatchEvent(new KeyboardEvent('keypress', {
+          key: 'Enter',
+          code: 'Enter',
+          which: 13,
+          keyCode: 13,
+          bubbles: true
+        }));
+      }
+    }, 500);
     
     return true;
   } catch (error) {
